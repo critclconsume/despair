@@ -5,27 +5,91 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Fasilitas;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class FasilitasController extends Controller
 {
+    // ── List all facilities ───────────────────────────────────
     public function index()
     {
         $fasilitas = Fasilitas::latest()->get();
         return view('admin.fasilitas.index', compact('fasilitas'));
     }
 
+    // ── Show create form ──────────────────────────────────────
     public function create()
     {
-        return view('admin.fasilitas.form');
+        return view('admin.fasilitas.form', [
+            'fasilitas' => null,       // null = create mode
+            'action'    => route('admin.fasilitas.store'),
+            'method'    => 'POST',
+        ]);
     }
 
+    // ── Store new facility ────────────────────────────────────
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $this->validateFasilitas($request);
+
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $this->uploadPhoto($request);
+        }
+
+        Fasilitas::create($validated);
+
+        return redirect()
+            ->route('admin.fasilitas.index')
+            ->with('success', "Fasilitas \"{$validated['name']}\" berhasil ditambahkan.");
+    }
+
+    // ── Show edit form ────────────────────────────────────────
+    public function edit(Fasilitas $fasilitas)
+    {
+        return view('admin.fasilitas.form', [
+            'fasilitas' => $fasilitas,
+            'action'    => route('admin.fasilitas.update', $fasilitas->id),
+            'method'    => 'PUT',
+        ]);
+    }
+
+    // ── Update existing facility ──────────────────────────────
+    public function update(Request $request, Fasilitas $fasilitas)
+    {
+        $validated = $this->validateFasilitas($request);
+
+        if ($request->hasFile('photo')) {
+            // Delete old photo file if it exists
+            $this->deletePhoto($fasilitas->photo);
+            $validated['photo'] = $this->uploadPhoto($request);
+        }
+        // If no new photo uploaded — keep the existing one (don't touch $validated['photo'])
+
+        $fasilitas->update($validated);
+
+        return redirect()
+            ->route('admin.fasilitas.index')
+            ->with('success', "Fasilitas \"{$fasilitas->name}\" berhasil diperbarui.");
+    }
+
+    // ── Delete facility ───────────────────────────────────────
+    public function destroy(Fasilitas $fasilitas)
+    {
+        $this->deletePhoto($fasilitas->photo);
+        $name = $fasilitas->name;
+        $fasilitas->delete();
+
+        return redirect()
+            ->route('admin.fasilitas.index')
+            ->with('success', "Fasilitas \"{$name}\" berhasil dihapus.");
+    }
+
+    // ── Private helpers ───────────────────────────────────────
+
+    private function validateFasilitas(Request $request): array
+    {
+        return $request->validate([
             'name'    => 'required|string|max:100',
             'address' => 'required|string|max:200',
-            'type'    => 'required|string',
+            'type'    => 'required|string|max:50',
             'status'  => 'required|in:open,maintenance',
             'photo'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ], [
@@ -36,69 +100,20 @@ class FasilitasController extends Controller
             'photo.image'      => 'File harus berupa gambar.',
             'photo.max'        => 'Ukuran foto maksimal 5 MB.',
         ]);
-
-        // Handle photo upload → public/images/fasilitas/
-        if ($request->hasFile('photo')) {
-            $filename = time() . '_' . $request->file('photo')->getClientOriginalName();
-            $request->file('photo')->move(public_path('images/fasilitas'), $filename);
-            $validated['photo'] = $filename;
-        }
-
-        Fasilitas::create($validated);
-
-        return redirect()->route('admin.fasilitas.index')
-                         ->with('success', "Fasilitas \"{$validated['name']}\" berhasil ditambahkan.");
     }
 
-    public function edit(Fasilitas $fasilitas)
+    private function uploadPhoto(Request $request): string
     {
-        return view('admin.fasilitas.form', compact('fasilitas'));
+        $file     = $request->file('photo');
+        $filename = time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
+        $file->move(public_path('images/fasilitas'), $filename);
+        return $filename;
     }
 
-    public function update(Request $request, Fasilitas $fasilitas)
+    private function deletePhoto(?string $photo): void
     {
-        $validated = $request->validate([
-            'name'    => 'required|string|max:100',
-            'address' => 'required|string|max:200',
-            'type'    => 'required|string',
-            'status'  => 'required|in:open,maintenance',
-            'photo'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-        ]);
-
-        // Replace photo if a new one was uploaded
-        if ($request->hasFile('photo')) {
-            // Delete old photo
-            if ($fasilitas->photo) {
-                $oldPath = public_path('images/fasilitas/' . $fasilitas->photo);
-                if (file_exists($oldPath)) unlink($oldPath);
-            }
-
-            $filename = time() . '_' . $request->file('photo')->getClientOriginalName();
-            $request->file('photo')->move(public_path('images/fasilitas'), $filename);
-            $validated['photo'] = $filename;
-        } else {
-            // Keep existing photo
-            unset($validated['photo']);
-        }
-
-        $fasilitas->update($validated);
-
-        return redirect()->route('admin.fasilitas.index')
-                         ->with('success', "Fasilitas \"{$fasilitas->name}\" berhasil diperbarui.");
-    }
-
-    public function destroy(Fasilitas $fasilitas)
-    {
-        // Delete photo file
-        if ($fasilitas->photo) {
-            $path = public_path('images/fasilitas/' . $fasilitas->photo);
-            if (file_exists($path)) unlink($path);
-        }
-
-        $name = $fasilitas->name;
-        $fasilitas->delete();
-
-        return redirect()->route('admin.fasilitas.index')
-                         ->with('success', "Fasilitas \"{$name}\" berhasil dihapus.");
+        if (!$photo) return;
+        $path = public_path('images/fasilitas/' . $photo);
+        if (file_exists($path)) unlink($path);
     }
 }

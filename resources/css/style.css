@@ -468,3 +468,47 @@ code { font-family: monospace; font-size: 12px; background: var(--bg-subtle); pa
   .form-card { padding: 20px; }
   .footer-brand { display: none; }
 }
+
+/* ── Navbar right group ── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Login Admin button ── */
+.nav-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border-med);
+  background: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.nav-admin-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.nav-admin-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-med);
+}
+
+/* When admin is already logged in */
+.nav-admin-active {
+  background: var(--teal-50);
+  color: var(--teal-800);
+  border-color: var(--teal-100);
+}
+.nav-admin-active:hover {
+  background: var(--teal-50);
+  color: var(--teal-800);
+}
