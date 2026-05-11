@@ -1,15 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-namespace App\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use App\Models\Fasilitas;
 use App\Models\Laporan;
 use App\Models\Pengumuman;
-use App\Http\Controllers\Controller;
-use App\Models\Pengumuman;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Admin;
 
 class PageController extends Controller
 {
@@ -111,9 +108,9 @@ class PageController extends Controller
 
         return view('pages.panduan', compact('wargaSteps', 'adminSteps'));
     }
-}
 
-{
+
+
     public function index()
     {
         $pengumuman = Pengumuman::latest('tanggal')->paginate(15);
@@ -176,4 +173,5 @@ class PageController extends Controller
         return redirect()->route('admin.pengumuman.index')
                          ->with('success', "Pengumuman \"{$judul}\" berhasil dihapus.");
     }
+
 }
